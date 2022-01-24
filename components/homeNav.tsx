@@ -19,9 +19,9 @@ const HomeNav: FC<{ links?: { name: string; link: string }[] }> = ({ links }) =>
               {links && links.length > 0
                 ? links.map((link) => (
                     <Pane paddingX={majorScale(3)} key={link.name}>
-                      <NextLink href="/blog">
+                      <NextLink href={link.link}>
                         <a>
-                          <Text fontSize="16px">Blog</Text>
+                          <Text fontSize="16px">{link.name}</Text>
                         </a>
                       </NextLink>
                     </Pane>

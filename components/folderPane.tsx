@@ -20,6 +20,7 @@ const FolderPane: FC<{ folder: any; docs: any[] }> = ({ folder, docs }) => {
     })
 
     const { data } = await res.json()
+    console.log(data)
     setDocs((state) => [...state, data])
   }
 

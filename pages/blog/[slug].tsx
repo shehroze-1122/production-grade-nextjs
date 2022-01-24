@@ -6,11 +6,14 @@ import { useRouter } from 'next/router'
 import { Post } from '../../types'
 import Container from '../../components/container'
 import HomeNav from '../../components/homeNav'
+import path from 'path'
+import fs from 'fs'
+import matter from 'gray-matter'
+import renderToString from 'next-mdx-remote/render-to-string'
+import { posts } from '../../content'
 
 const BlogPost: FC<Post> = ({ source, frontMatter }) => {
-  const content = hydrate(source)
   const router = useRouter()
-
   if (router.isFallback) {
     return (
       <Pane width="100%" height="100%">
@@ -18,6 +21,8 @@ const BlogPost: FC<Post> = ({ source, frontMatter }) => {
       </Pane>
     )
   }
+  const content = hydrate(source)
+
   return (
     <Pane>
       <Head>
@@ -40,7 +45,7 @@ const BlogPost: FC<Post> = ({ source, frontMatter }) => {
 }
 
 BlogPost.defaultProps = {
-  source: '',
+  source: ' ',
   frontMatter: { title: 'default title', summary: 'summary', publishedOn: '' },
 }
 
@@ -50,3 +55,52 @@ BlogPost.defaultProps = {
  * Posts can come from the fs or our CMS
  */
 export default BlogPost
+
+export function getStaticPaths(){
+
+  const postDirPath = path.join(process.cwd(), 'posts')
+  const filenames = fs.readdirSync(postDirPath)
+
+  const slugs = filenames.map((filename)=>{
+    const filePath = path.join(postDirPath, filename)
+    const post = fs.readFileSync(filePath, 'utf-8');
+    const { data } = matter(post);
+    return data.slug;
+  })
+  
+  const paths = slugs.map((slug)=>({ params: { slug }}))
+  return { paths, fallback: true};
+
+}
+
+export async function getStaticProps({params, preview}){
+  
+  let post;
+
+  try {
+    const postPath = path.join(process.cwd(), 'posts', `${params.slug}.mdx`);
+    post = fs.readFileSync(postPath, 'utf-8');
+    
+  } catch (error) {
+    const cmsPosts = preview? posts.draft: posts.published;
+    post = cmsPosts.find((post)=>{
+      const { data } = matter(post);
+      return data.slug===params.slug;
+    })
+  }
+
+  
+  if (!post) {
+    throw new Error('no post found with this slug')
+  }
+
+  const { data, content } = matter(post);
+
+  const source = await renderToString(content, { scope: data })
+  return {
+    props: {
+      source,
+      frontMatter: data
+    }
+  }
+}
